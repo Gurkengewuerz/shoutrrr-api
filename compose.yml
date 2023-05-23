@@ -1,0 +1,21 @@
+version: "3"
+
+services:
+  shoutrrrapi:
+    image: reg.mc8051.de/gurkengewuerz/shoutrrr-api:latest
+    container_name: shoutrrr-api
+    volumes:
+      - "./data/config.yml:/app/config.yml:ro"
+    restart: unless-stopped
+    networks: [traefik]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.shoutrrr.entrypoints=websecure"
+      - "traefik.http.routers.shoutrrr.rule=HOST(`$VIRTUAL_HOST`)"
+      - "traefik.http.routers.shoutrrr.service=shoutrrr-srv"
+      - "traefik.http.services.shoutrrr-srv.loadbalancer.server.port=3000"
+
+networks:
+  traefik:
+    external: true
