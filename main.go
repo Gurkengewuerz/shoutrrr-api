@@ -80,6 +80,12 @@ func main() {
 			})
 		}
 
+		log.WithFields(log.Fields{
+			"uri":          c.Request().URI().String(),
+			"body":         string(c.Body()),
+			"content-type": c.Get(fiber.HeaderContentType),
+		}).Tracef("new request")
+
 		switch c.Params("type") {
 		case "slack":
 			req := new(types.Payload)
@@ -151,42 +157,52 @@ func main() {
 		default:
 			req := new(types.Simple)
 			if err := c.BodyParser(req); err != nil {
-				log.Warnf("unknown default body")
-				return ParseError(c)
+				log.Warnf("unknown default body defaulting to body")
+				msg = string(c.Body())
+			} else {
+				log.WithField("req", req).Debug("new default request")
+				msg = req.Message
+				title = req.Title
 			}
-			log.WithField("req", req).Debug("new default request")
-			title = req.Title
-			msg = req.Message
-		}
 
-		sender, err := shoutrrr.CreateSender(shout...)
-		if err != nil {
-			log.WithError(err).Warnf("failed to create shoutrrr sender")
-			return c.Status(fiber.StatusBadRequest).JSON(map[string]interface{}{
-				"error":   true,
-				"message": err.Error(),
-			})
-		}
-		errs := sender.Send(msg, &stypes.Params{
-			stypes.TitleKey: title,
-		})
-
-		var errorString []string
-		for _, theError := range errs {
-			if theError == nil {
-				continue
+			if len(title) == 0 {
+				title = c.Query("title", c.Query("_title", "Unknown"))
 			}
-			errorString = append(errorString, theError.Error())
-		}
-		if len(errorString) > 0 {
-			log.WithField("errors", errorString).Warnf("failed to send shoutrrr message")
-			return c.Status(fiber.StatusBadRequest).JSON(map[string]interface{}{
-				"error":   true,
-				"message": errorString,
-			})
 		}
 
-		log.WithField("id", c.Params("id")).Debug("new shot send")
+		if len(shout) > 0 {
+
+			sender, err := shoutrrr.CreateSender(shout...)
+			if err != nil {
+				log.WithError(err).Warnf("failed to create shoutrrr sender")
+				return c.Status(fiber.StatusBadRequest).JSON(map[string]interface{}{
+					"error":   true,
+					"message": err.Error(),
+				})
+			}
+			errs := sender.Send(msg, &stypes.Params{
+				stypes.TitleKey: title,
+			})
+
+			var errorString []string
+			for _, theError := range errs {
+				if theError == nil {
+					continue
+				}
+				errorString = append(errorString, theError.Error())
+			}
+			if len(errorString) > 0 {
+				log.WithField("errors", errorString).Warnf("failed to send shoutrrr message")
+				return c.Status(fiber.StatusBadRequest).JSON(map[string]interface{}{
+					"error":   true,
+					"message": errorString,
+				})
+			}
+		} else {
+			log.WithField("id", c.Params("id")).Warnf("empty shout")
+		}
+
+		log.WithField("id", c.Params("id")).Debug("new shout send")
 		return c.Status(fiber.StatusCreated).JSON(map[string]interface{}{
 			"error":   false,
 			"message": "ok",

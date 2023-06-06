@@ -2,7 +2,7 @@ version: "3"
 
 services:
   shoutrrrapi:
-    image: reg.mc8051.de/gurkengewuerz/shoutrrr-api:latest
+    image: ghcr.io/gurkengewuerz/shoutrrr-api:latest
     container_name: shoutrrr-api
     volumes:
       - "./data/config.yml:/app/config.yml:ro"
