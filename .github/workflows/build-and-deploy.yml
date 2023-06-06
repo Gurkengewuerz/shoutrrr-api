@@ -24,6 +24,13 @@ jobs:
         uses: docker/setup-qemu-action@master
         with:
           platforms: arm64,amd64
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v4
@@ -52,5 +59,11 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
           build-args: |
             VERSION=${{ steps.meta.outputs.version }}
+      - name: Prepare cache for next build
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
