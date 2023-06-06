@@ -1,0 +1,15 @@
+port: 3000
+
+# PanicLevel 0
+# FatalLevel 1
+# ErrorLevel 2
+# WarnLevel 3
+# InfoLevel 4
+# DebugLevel 5
+# TraceLevel 6
+logLevel: 6
+
+config:
+  - id: mysupersecretid
+    shout:
+      #- "discord://XXXXXXXXXXXXXX@123456789?username=TestHook"
