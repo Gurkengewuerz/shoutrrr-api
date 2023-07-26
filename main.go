@@ -63,7 +63,7 @@ func main() {
 	app := fiber.New()
 	app.Use(middleware.Logger())
 
-	app.Post("/:id/:type?", func(c *fiber.Ctx) error {
+	app.Get("/alive", func(c *fiber.Ctx) error {
 		return c.JSON(time.Now().Format(time.RFC3339))
 	})
 
