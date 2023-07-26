@@ -10,6 +10,7 @@ import (
 	"os"
 	"shoutrrr-api/middleware"
 	"shoutrrr-api/types"
+	"time"
 )
 
 type Config struct {
@@ -61,6 +62,11 @@ func main() {
 
 	app := fiber.New()
 	app.Use(middleware.Logger())
+
+	app.Post("/:id/:type?", func(c *fiber.Ctx) error {
+		return c.JSON(time.Now().Format(time.RFC3339))
+	})
+
 	app.Post("/:id/:type?", func(c *fiber.Ctx) error {
 		var title = ""
 		var msg = ""
