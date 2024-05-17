@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"fmt"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	log "github.com/sirupsen/logrus"
 	"strings"
 	"sync"
@@ -16,7 +16,7 @@ func Logger() fiber.Handler {
 		errHandler fiber.ErrorHandler
 	)
 
-	return func(c *fiber.Ctx) (err error) {
+	return func(c fiber.Ctx) (err error) {
 		once.Do(func() {
 			errHandler = c.App().ErrorHandler
 		})

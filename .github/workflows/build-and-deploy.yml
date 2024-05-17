@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Set up Docker Buildx
@@ -33,7 +33,7 @@ jobs:
             ${{ runner.os }}-buildx-
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           # list of Docker images to use as base name for tags
           images: |
@@ -45,14 +45,14 @@ jobs:
             type=sha
             type=raw,value=develop
       - name: Login to GHCR
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push
         id: docker_build
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           push: true
           context: .

@@ -1,10 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/containrrr/shoutrrr"
 	stypes "github.com/containrrr/shoutrrr/pkg/types"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -24,7 +25,7 @@ type Config struct {
 
 var config = Config{}
 
-func ParseError(c *fiber.Ctx) error {
+func ParseError(c fiber.Ctx) error {
 	log.Warnf("failed to parse request")
 	return c.Status(fiber.StatusBadRequest).JSON(map[string]interface{}{
 		"error":   true,
@@ -63,11 +64,11 @@ func main() {
 	app := fiber.New()
 	app.Use(middleware.Logger())
 
-	app.Get("/alive", func(c *fiber.Ctx) error {
+	app.Get("/alive", func(c fiber.Ctx) error {
 		return c.JSON(time.Now().Format(time.RFC3339))
 	})
 
-	app.Post("/:id/:type?", func(c *fiber.Ctx) error {
+	app.Post("/:id/:type?", func(c fiber.Ctx) error {
 		var title = ""
 		var msg = ""
 
@@ -95,60 +96,62 @@ func main() {
 		switch c.Params("type") {
 		case "slack":
 			req := new(types.Payload)
-			if err := c.BodyParser(req); err != nil {
+			if err := c.Bind().Body(req); err != nil {
 				log.Warnf("unknown slack body")
 				return ParseError(c)
 			}
-			log.WithField("req", req).Debug("new slack request")
+			jsonStr, _ := json.Marshal(req)
+			log.WithField("req", string(jsonStr)).Debug("new slack request")
 			msg = req.Text
 			for _, attachment := range req.Attachments {
 				if len(msg) == 0 {
 					msg = attachment.Title
 				} else {
-					msg = "\r\n" + attachment.Title
+					msg += "\r\n" + attachment.Title
 				}
 
 				for _, embedField := range attachment.Fields {
 					if len(msg) == 0 {
 						msg = embedField.Title + ": " + embedField.Value
 					} else {
-						msg = "\r\n" + embedField.Title + ": " + embedField.Value
+						msg += "\r\n" + embedField.Title + ": " + embedField.Value
 					}
 				}
 
 				if len(msg) == 0 {
 					msg = attachment.Footer
 				} else {
-					msg = "\r\n" + attachment.Footer
+					msg += "\r\n" + attachment.Footer
 				}
 			}
 			break
 		case "discord":
 			req := new(types.Message)
-			if err := c.BodyParser(req); err != nil {
+			if err := c.Bind().Body(req); err != nil {
 				log.Warnf("unknown discord body")
 				return ParseError(c)
 			}
-			log.WithField("req", req).Debug("new discord request")
+			jsonStr, _ := json.Marshal(req)
+			log.WithField("req", string(jsonStr)).Debug("new discord request")
 			msg = req.Content
 			for _, embed := range req.Embeds {
 				if len(msg) == 0 {
 					msg = embed.Title
 				} else {
-					msg = "\r\n" + embed.Title
+					msg += "\r\n" + embed.Title
 				}
 
 				if len(msg) == 0 {
 					msg = embed.Description
 				} else {
-					msg = "\r\n" + embed.Description
+					msg += "\r\n" + embed.Description
 				}
 
 				for _, embedField := range embed.Fields {
 					if len(msg) == 0 {
 						msg = embedField.Name + ": " + embedField.Value
 					} else {
-						msg = "\r\n" + embedField.Name + ": " + embedField.Value
+						msg += "\r\n" + embedField.Name + ": " + embedField.Value
 					}
 
 				}
@@ -156,17 +159,18 @@ func main() {
 				if len(msg) == 0 {
 					msg = embed.Footer.Text
 				} else {
-					msg = "\r\n" + embed.Footer.Text
+					msg += "\r\n" + embed.Footer.Text
 				}
 			}
 			break
 		default:
 			req := new(types.Simple)
-			if err := c.BodyParser(req); err != nil {
+			if err := c.Bind().Body(req); err != nil {
 				log.Warnf("unknown default body defaulting to body")
 				msg = string(c.Body())
 			} else {
-				log.WithField("req", req).Debug("new default request")
+				jsonStr, _ := json.Marshal(req)
+				log.WithField("req", string(jsonStr)).Debug("new default request")
 				msg = req.Message
 				title = req.Title
 			}
@@ -198,10 +202,17 @@ func main() {
 				errorString = append(errorString, theError.Error())
 			}
 			if len(errorString) > 0 {
-				log.WithField("errors", errorString).Warnf("failed to send shoutrrr message")
+				log.WithFields(log.Fields{
+					"error":        true,
+					"errorMessage": errorString,
+					"message":      msg,
+					"title":        title,
+				}).Warnf("failed to send shoutrrr message")
 				return c.Status(fiber.StatusBadRequest).JSON(map[string]interface{}{
-					"error":   true,
-					"message": errorString,
+					"error":        true,
+					"errorMessage": errorString,
+					"message":      msg,
+					"title":        title,
 				})
 			}
 		} else {
